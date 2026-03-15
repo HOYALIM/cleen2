@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>cleen2 Library</title>
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">cleen2</p>
+          <h1>Saved stacks you can actually recover.</h1>
+        </div>
+        <button id="refreshBtn" class="ghost-btn" type="button">Refresh</button>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="hero-kicker">Tab Parking Library</p>
+            <p class="hero-lead">
+              Park tabs now, restore them later, and keep Chrome lighter without throwing your context away.
+            </p>
+          </div>
+          <div class="hero-actions">
+            <button id="parkWindowBtn" class="hero-btn hero-btn--primary" type="button">Park Window</button>
+            <button id="parkInactiveBtn" class="hero-btn" type="button">Park Inactive</button>
+            <button id="discardInactiveBtn" class="hero-btn" type="button">Discard Inactive</button>
+          </div>
+        </section>
+
+        <section class="metric-grid">
+          <article class="metric-card">
+            <span class="metric-label">Open Web Tabs</span>
+            <strong class="metric-value" id="openCount">0</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Parkable</span>
+            <strong class="metric-value" id="parkableCount">0</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Saved Stacks</span>
+            <strong class="metric-value" id="stackCount">0</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Saved Tabs</span>
+            <strong class="metric-value" id="savedTabCount">0</strong>
+          </article>
+        </section>
+
+        <section class="toolbar">
+          <input id="searchInput" class="search-input" type="search" placeholder="Search stacks, domains, or tab titles" />
+          <p id="status" class="status" aria-live="polite"></p>
+        </section>
+
+        <section id="stackGrid" class="stack-grid"></section>
+      </main>
+    </div>
+
+    <script src="dashboard.js"></script>
+  </body>
+</html>

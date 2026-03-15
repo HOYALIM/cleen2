@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=392" />
+    <title>cleen2</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div class="brand-row">
+          <img src="../assets/icon-48.png" alt="cleen2 logo" class="brand-mark" />
+          <div>
+            <p class="eyebrow">Tab Parking</p>
+            <h1>cleen2</h1>
+          </div>
+        </div>
+        <p class="lead" id="focusLabel">Park safe tabs, keep your place, and make Chrome feel lighter.</p>
+      </header>
+
+      <section class="metric-grid">
+        <article class="metric-card">
+          <span class="metric-label">Open Web Tabs</span>
+          <strong class="metric-value" id="openCount">0</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Parkable</span>
+          <strong class="metric-value" id="parkableCount">0</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Saved Tabs</span>
+          <strong class="metric-value" id="savedTabCount">0</strong>
+        </article>
+      </section>
+
+      <section class="action-stack">
+        <button id="parkWindowBtn" class="action-card action-card--primary" type="button">
+          <span class="action-title">Park Window</span>
+          <span class="action-copy">Save this window into one classified stack and open the library.</span>
+        </button>
+        <button id="parkInactiveBtn" class="action-card" type="button">
+          <span class="action-title">Park Inactive</span>
+          <span class="action-copy">Keep your active tab and save the safe background tabs.</span>
+        </button>
+        <button id="discardInactiveBtn" class="action-card" type="button">
+          <span class="action-title">Discard Inactive</span>
+          <span class="action-copy">Use Chrome's native discard to lower memory pressure fast.</span>
+        </button>
+      </section>
+
+      <section class="recent-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow eyebrow--small">Recent</p>
+            <h2>Saved stacks</h2>
+          </div>
+          <button id="openLibraryBtn" class="ghost-btn" type="button">Open Library</button>
+        </div>
+        <div id="recentStacks" class="stack-list"></div>
+      </section>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
