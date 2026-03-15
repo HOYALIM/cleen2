@@ -29,6 +29,10 @@
           <strong class="metric-value" id="parkableCount">0</strong>
         </article>
         <article class="metric-card">
+          <span class="metric-label">Protected Sites</span>
+          <strong class="metric-value" id="protectedCount">0</strong>
+        </article>
+        <article class="metric-card">
           <span class="metric-label">Saved Tabs</span>
           <strong class="metric-value" id="savedTabCount">0</strong>
         </article>
@@ -47,6 +51,23 @@
           <span class="action-title">Discard Inactive</span>
           <span class="action-copy">Use Chrome's native discard to lower memory pressure fast.</span>
         </button>
+      </section>
+
+      <section class="manage-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow eyebrow--small">Protect</p>
+            <h2>Protected sites</h2>
+          </div>
+          <button id="protectCurrentSiteBtn" class="ghost-btn" type="button">Protect Current Site</button>
+        </div>
+
+        <form id="protectedDomainForm" class="inline-form">
+          <input id="protectedDomainInput" class="inline-input" type="text" placeholder="mail.google.com" />
+          <button class="ghost-btn ghost-btn--solid" type="submit">Add</button>
+        </form>
+
+        <div id="protectedDomains" class="chip-list"></div>
       </section>
 
       <section class="recent-section">

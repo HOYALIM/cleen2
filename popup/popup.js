@@ -9,9 +9,14 @@ const $ = (id) => document.getElementById(id);
 
 const openCount = $('openCount');
 const parkableCount = $('parkableCount');
+const protectedCount = $('protectedCount');
 const savedTabCount = $('savedTabCount');
 const focusLabel = $('focusLabel');
 const recentStacks = $('recentStacks');
+const protectedDomains = $('protectedDomains');
+const protectedDomainForm = $('protectedDomainForm');
+const protectedDomainInput = $('protectedDomainInput');
+const protectCurrentSiteBtn = $('protectCurrentSiteBtn');
 const status = $('status');
 const parkWindowBtn = $('parkWindowBtn');
 const parkInactiveBtn = $('parkInactiveBtn');
@@ -36,22 +41,67 @@ function setStatus(message) {
   status.textContent = message || '';
 }
 
+function renderProtectedDomains(items) {
+  protectedDomains.replaceChildren();
+
+  if (!items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'chip-empty';
+    empty.textContent = 'No protected sites yet.';
+    protectedDomains.appendChild(empty);
+    return;
+  }
+
+  for (const domain of items) {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.textContent = domain;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '×';
+    removeBtn.setAttribute('aria-label', `Remove ${domain}`);
+    removeBtn.addEventListener('click', async () => {
+      const result = await sendMessage('removeProtectedDomain', { domain });
+      setStatus(result.success ? `Removed ${domain} from protected sites.` : result.error);
+      await loadOverview();
+    });
+
+    chip.appendChild(removeBtn);
+    protectedDomains.appendChild(chip);
+  }
+}
+
 function renderRecentStack(stack) {
   const card = document.createElement('article');
   card.className = 'stack-card';
+  if (stack.favorite) {
+    card.classList.add('is-favorite');
+  }
 
   const head = document.createElement('div');
   head.className = 'stack-head';
 
+  const headMain = document.createElement('div');
+  headMain.className = 'stack-head-main';
+
   const badge = document.createElement('span');
   badge.className = 'stack-badge';
   badge.textContent = stack.category.label;
+  headMain.appendChild(badge);
+
+  if (stack.favorite) {
+    const favorite = document.createElement('span');
+    favorite.className = 'stack-favorite';
+    favorite.textContent = '★ Favorite';
+    headMain.appendChild(favorite);
+  }
 
   const time = document.createElement('span');
   time.className = 'stack-time';
   time.textContent = formatRelative(stack.createdAt);
 
-  head.append(badge, time);
+  head.append(headMain, time);
 
   const title = document.createElement('h3');
   title.className = 'stack-title';
@@ -83,15 +133,20 @@ function renderRecentStack(stack) {
     await loadOverview();
   });
 
-  const libraryBtn = document.createElement('button');
-  libraryBtn.className = 'stack-btn stack-btn--library';
-  libraryBtn.type = 'button';
-  libraryBtn.textContent = 'Library';
-  libraryBtn.addEventListener('click', async () => {
-    await chrome.tabs.create({ url: chrome.runtime.getURL('dashboard/dashboard.html') });
+  const favoriteBtn = document.createElement('button');
+  favoriteBtn.className = 'stack-btn stack-btn--favorite';
+  if (stack.favorite) {
+    favoriteBtn.classList.add('is-on');
+  }
+  favoriteBtn.type = 'button';
+  favoriteBtn.textContent = stack.favorite ? 'Unfavorite' : 'Favorite';
+  favoriteBtn.addEventListener('click', async () => {
+    const result = await sendMessage('toggleFavorite', { stackId: stack.id });
+    setStatus(result.success ? `${result.favorite ? 'Favorited' : 'Unfavorited'} stack.` : result.error);
+    await loadOverview();
   });
 
-  actions.append(restoreBtn, libraryBtn);
+  actions.append(restoreBtn, favoriteBtn);
   card.append(head, title, meta);
   if (domainRow.childNodes.length) {
     card.appendChild(domainRow);
@@ -126,8 +181,10 @@ async function loadOverview() {
 
   openCount.textContent = payload.overview.openCount;
   parkableCount.textContent = payload.overview.parkableCount;
+  protectedCount.textContent = payload.overview.protectedCount;
   savedTabCount.textContent = payload.overview.savedTabCount;
-  focusLabel.textContent = `Current window leans ${payload.overview.focusLabel}. Park ${payload.overview.parkableCount} safe tabs or discard ${payload.overview.discardableCount} inactive ones.`;
+  focusLabel.textContent = `Current window leans ${payload.overview.focusLabel}. Park ${payload.overview.parkableCount} safe tabs, keep ${payload.overview.protectedCount} protected sites untouched, or discard ${payload.overview.discardableCount} inactive ones.`;
+  renderProtectedDomains(payload.protectedDomains || []);
   renderRecentStacks(payload.recentStacks);
 }
 
@@ -139,6 +196,8 @@ async function runAction(type) {
       setStatus(`Discarded ${result.discardedCount} inactive tabs.`);
     } else if (result.parkedCount) {
       setStatus(`Saved ${result.parkedCount} tabs into a new stack.`);
+    } else if (result.protectedDomain) {
+      setStatus(`Protected ${result.protectedDomain}.`);
     } else {
       setStatus('Action completed.');
     }
@@ -158,6 +217,25 @@ parkInactiveBtn.addEventListener('click', async () => {
 
 discardInactiveBtn.addEventListener('click', async () => {
   await runAction('discardInactiveTabs');
+});
+
+protectCurrentSiteBtn.addEventListener('click', async () => {
+  await runAction('protectCurrentSite');
+});
+
+protectedDomainForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const domain = protectedDomainInput.value.trim();
+  if (!domain) {
+    protectedDomainInput.focus();
+    return;
+  }
+  const result = await sendMessage('addProtectedDomain', { domain });
+  if (result.success) {
+    protectedDomainInput.value = '';
+  }
+  setStatus(result.success ? `Protected ${result.protectedDomain}.` : result.error);
+  await loadOverview();
 });
 
 openLibraryBtn.addEventListener('click', async () => {

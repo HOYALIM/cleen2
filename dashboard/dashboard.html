@@ -41,6 +41,10 @@
             <strong class="metric-value" id="parkableCount">0</strong>
           </article>
           <article class="metric-card">
+            <span class="metric-label">Protected Sites</span>
+            <strong class="metric-value" id="protectedCount">0</strong>
+          </article>
+          <article class="metric-card">
             <span class="metric-label">Saved Stacks</span>
             <strong class="metric-value" id="stackCount">0</strong>
           </article>
@@ -50,9 +54,36 @@
           </article>
         </section>
 
-        <section class="toolbar">
-          <input id="searchInput" class="search-input" type="search" placeholder="Search stacks, domains, or tab titles" />
-          <p id="status" class="status" aria-live="polite"></p>
+        <section class="control-grid">
+          <article class="manage-panel">
+            <div class="section-head">
+              <div>
+                <p class="panel-kicker">Protected sites</p>
+                <h2>Never clean these domains by accident.</h2>
+              </div>
+              <button id="protectCurrentSiteBtn" class="ghost-btn" type="button">Protect Current Site</button>
+            </div>
+
+            <form id="protectedDomainForm" class="inline-form">
+              <input id="protectedDomainInput" class="inline-input" type="text" placeholder="mail.google.com" />
+              <button class="ghost-btn" type="submit">Add</button>
+            </form>
+
+            <div id="protectedDomains" class="chip-list"></div>
+          </article>
+
+          <article class="filter-panel">
+            <div class="section-head">
+              <div>
+                <p class="panel-kicker">Library filters</p>
+                <h2>Find the stack you want fast.</h2>
+              </div>
+              <button id="favoritesOnlyBtn" class="ghost-btn" type="button">Favorites Only</button>
+            </div>
+
+            <input id="searchInput" class="search-input" type="search" placeholder="Search stacks, domains, or tab titles" />
+            <p id="status" class="status" aria-live="polite"></p>
+          </article>
         </section>
 
         <section id="stackGrid" class="stack-grid"></section>

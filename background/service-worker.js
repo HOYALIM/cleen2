@@ -3,6 +3,7 @@
 const STORAGE_KEYS = {
   stacks: 'cleen2.stacks',
   activity: 'cleen2.activity',
+  protectedDomains: 'cleen2.protectedDomains',
 };
 
 const MAX_STACKS = 100;
@@ -116,6 +117,27 @@ async function storageSet(key, value) {
   }
 }
 
+function canManageUrl(url) {
+  return typeof url === 'string' && /^https?:/i.test(url);
+}
+
+function normalizeDomain(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) {
+    return '';
+  }
+  try {
+    const parsed = raw.includes('://') ? new URL(raw) : new URL(`https://${raw}`);
+    return parsed.hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+function getDomain(url) {
+  return normalizeDomain(url) || 'internal';
+}
+
 async function getStacks() {
   const stacks = await storageGet(STORAGE_KEYS.stacks, []);
   return Array.isArray(stacks) ? stacks : [];
@@ -125,19 +147,26 @@ async function setStacks(stacks) {
   await storageSet(STORAGE_KEYS.stacks, stacks.slice(0, MAX_STACKS));
 }
 
-function canManageUrl(url) {
-  return typeof url === 'string' && /^https?:/i.test(url);
+async function getProtectedDomains() {
+  const domains = await storageGet(STORAGE_KEYS.protectedDomains, []);
+  return Array.isArray(domains)
+    ? domains.map((entry) => normalizeDomain(entry)).filter(Boolean).sort()
+    : [];
 }
 
-function getDomain(url) {
-  if (!canManageUrl(url)) {
-    return 'internal';
-  }
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return 'internal';
-  }
+async function setProtectedDomains(domains) {
+  const uniqueDomains = Array.from(new Set(domains.map((entry) => normalizeDomain(entry)).filter(Boolean))).sort();
+  await storageSet(STORAGE_KEYS.protectedDomains, uniqueDomains);
+  return uniqueDomains;
+}
+
+function sortStacksForDisplay(stacks) {
+  return [...stacks].sort((a, b) => {
+    if (Boolean(a.favorite) !== Boolean(b.favorite)) {
+      return a.favorite ? -1 : 1;
+    }
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 }
 
 function touchTab(tabId, timestamp = Date.now()) {
@@ -191,18 +220,23 @@ async function seedActivityMap() {
   }
 }
 
-function isParkableTab(tab, includeActive) {
+function isProtectedTab(tab, protectedSet) {
+  return protectedSet.has(getDomain(tab.url));
+}
+
+function isParkableTab(tab, includeActive, protectedSet) {
   return Boolean(
     tab &&
       tab.id &&
       canManageUrl(tab.url) &&
       !tab.pinned &&
       !tab.audible &&
+      !isProtectedTab(tab, protectedSet) &&
       (includeActive || !tab.active)
   );
 }
 
-function isDiscardableTab(tab) {
+function isDiscardableTab(tab, protectedSet) {
   return Boolean(
     tab &&
       tab.id &&
@@ -210,7 +244,8 @@ function isDiscardableTab(tab) {
       !tab.active &&
       !tab.pinned &&
       !tab.audible &&
-      !tab.discarded
+      !tab.discarded &&
+      !isProtectedTab(tab, protectedSet)
   );
 }
 
@@ -311,6 +346,7 @@ function buildStack(tabs, sourceAction) {
     id: createId(),
     createdAt: new Date().toISOString(),
     sourceAction,
+    favorite: false,
     title: buildStackTitle(storedTabs, category, domains),
     category,
     domains,
@@ -327,6 +363,7 @@ function serializeStackPreview(stack, previewLimit = 3) {
     id: stack.id,
     createdAt: stack.createdAt,
     sourceAction: stack.sourceAction,
+    favorite: Boolean(stack.favorite),
     title: stack.title,
     category: stack.category,
     domains: stack.domains,
@@ -357,7 +394,8 @@ async function openDashboardTab(stackId = '') {
 
 async function parkTabs({ includeActive, sourceAction, openLibrary }) {
   const currentTabs = await chrome.tabs.query({ currentWindow: true });
-  const parkableTabs = currentTabs.filter((tab) => isParkableTab(tab, includeActive));
+  const protectedSet = new Set(await getProtectedDomains());
+  const parkableTabs = currentTabs.filter((tab) => isParkableTab(tab, includeActive, protectedSet));
 
   if (!parkableTabs.length) {
     return { success: false, error: 'No safe tabs to park in this window.' };
@@ -381,7 +419,8 @@ async function parkTabs({ includeActive, sourceAction, openLibrary }) {
 
 async function discardInactiveTabs() {
   const currentTabs = await chrome.tabs.query({ currentWindow: true });
-  const discardableTabs = currentTabs.filter(isDiscardableTab);
+  const protectedSet = new Set(await getProtectedDomains());
+  const discardableTabs = currentTabs.filter((tab) => isDiscardableTab(tab, protectedSet));
 
   if (!discardableTabs.length) {
     return { success: false, error: 'No safe tabs to discard in this window.' };
@@ -501,32 +540,103 @@ async function deleteStack(stackId) {
   return { success: true };
 }
 
+async function renameStack(stackId, nextTitle) {
+  const title = String(nextTitle || '').trim();
+  if (!title) {
+    return { success: false, error: 'Title cannot be empty.' };
+  }
+
+  const stacks = await getStacks();
+  const stack = stacks.find((entry) => entry.id === stackId);
+
+  if (!stack) {
+    return { success: false, error: 'Saved stack not found.' };
+  }
+
+  stack.title = title.slice(0, 120);
+  await setStacks(stacks);
+  return { success: true };
+}
+
+async function toggleFavorite(stackId) {
+  const stacks = await getStacks();
+  const stack = stacks.find((entry) => entry.id === stackId);
+
+  if (!stack) {
+    return { success: false, error: 'Saved stack not found.' };
+  }
+
+  stack.favorite = !stack.favorite;
+  await setStacks(stacks);
+  return { success: true, favorite: stack.favorite };
+}
+
+async function addProtectedDomain(rawDomain) {
+  const domain = normalizeDomain(rawDomain);
+  if (!domain) {
+    return { success: false, error: 'Enter a valid hostname.' };
+  }
+
+  const nextDomains = await setProtectedDomains([...(await getProtectedDomains()), domain]);
+  return { success: true, protectedDomains: nextDomains, protectedDomain: domain };
+}
+
+async function removeProtectedDomain(rawDomain) {
+  const domain = normalizeDomain(rawDomain);
+  const currentDomains = await getProtectedDomains();
+  const nextDomains = currentDomains.filter((entry) => entry !== domain);
+
+  if (nextDomains.length === currentDomains.length) {
+    return { success: false, error: 'Protected domain not found.' };
+  }
+
+  await setProtectedDomains(nextDomains);
+  return { success: true, protectedDomains: nextDomains };
+}
+
+async function protectCurrentSite() {
+  const activeTabs = await chrome.tabs.query({ currentWindow: true, active: true });
+  const activeTab = activeTabs[0];
+  const domain = getDomain(activeTab?.url);
+
+  if (!activeTab || domain === 'internal') {
+    return { success: false, error: 'Current tab is not a protectable web page.' };
+  }
+
+  return addProtectedDomain(domain);
+}
+
 async function getOverview() {
   const currentTabs = await chrome.tabs.query({ currentWindow: true });
   const webTabs = currentTabs.filter((tab) => canManageUrl(tab.url));
-  const stacks = await getStacks();
+  const protectedDomains = await getProtectedDomains();
+  const protectedSet = new Set(protectedDomains);
+  const stacks = sortStacksForDisplay(await getStacks());
 
   return {
     success: true,
     overview: {
       openCount: webTabs.length,
-      parkableCount: currentTabs.filter((tab) => isParkableTab(tab, true)).length,
-      discardableCount: currentTabs.filter(isDiscardableTab).length,
+      parkableCount: currentTabs.filter((tab) => isParkableTab(tab, true, protectedSet)).length,
+      discardableCount: currentTabs.filter((tab) => isDiscardableTab(tab, protectedSet)).length,
+      protectedCount: protectedDomains.length,
       stackCount: stacks.length,
       savedTabCount: stacks.reduce((sum, stack) => sum + (stack.stats?.tabCount || 0), 0),
       focusLabel: getWindowFocusLabel(webTabs),
     },
+    protectedDomains,
     recentStacks: stacks.slice(0, 3).map((stack) => serializeStackPreview(stack)),
   };
 }
 
 async function getDashboardData() {
-  const overview = await getOverview();
-  const stacks = await getStacks();
+  const overviewPayload = await getOverview();
+  const stacks = sortStacksForDisplay(await getStacks());
 
   return {
     success: true,
-    overview: overview.overview,
+    overview: overviewPayload.overview,
+    protectedDomains: overviewPayload.protectedDomains,
     stacks,
   };
 }
@@ -589,10 +699,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return respond(openSavedTab(message.stackId, message.tabId));
     case 'deleteStack':
       return respond(deleteStack(message.stackId));
+    case 'renameStack':
+      return respond(renameStack(message.stackId, message.title));
+    case 'toggleFavorite':
+      return respond(toggleFavorite(message.stackId));
+    case 'protectCurrentSite':
+      return respond(protectCurrentSite());
+    case 'addProtectedDomain':
+      return respond(addProtectedDomain(message.domain));
+    case 'removeProtectedDomain':
+      return respond(removeProtectedDomain(message.domain));
     case 'openDashboard':
-      return respond(
-        openDashboardTab(message.stackId).then(() => ({ success: true }))
-      );
+      return respond(openDashboardTab(message.stackId).then(() => ({ success: true })));
     default:
       return false;
   }

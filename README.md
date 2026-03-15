@@ -13,6 +13,8 @@ Instead of pretending to measure exact browser memory usage, `cleen2` focuses on
 - **Park Inactive**: save inactive tabs while keeping your active context open
 - **Discard Inactive**: use Chrome's native discard on safe tabs without closing them
 - **Restore Later**: reopen saved stacks from a lightweight library page
+- **Favorite Important Stacks**: pin key stacks to the top of the library
+- **Protect Important Sites**: exclude mail, docs, dashboards, or any domain you choose from cleanup
 
 ## Product direction
 
@@ -36,6 +38,8 @@ The core promise is:
 - Save the current window into a named stack
 - Auto-classify stacks by domain and title signals
 - Restore full stacks or reopen individual tabs later
+- Rename stacks and mark favorites in the library
+- Protect current sites or manually add protected domains
 - Keep pinned and audible tabs protected during cleanup
 - Open a library page to browse parked stacks
 
