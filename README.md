@@ -59,6 +59,8 @@ Generated zip:
 - `popup/`: quick actions and recent stacks
 - `dashboard/`: full saved-stack library
 - `docs/PRODUCT_STRATEGY.md`: product positioning and reference analysis
+- `docs/PRD.md`: current product requirements and scope
+- `docs/SPIKE_GAP_ANALYSIS.md`: what the current prototype still needs to fix
 
 ## License
 

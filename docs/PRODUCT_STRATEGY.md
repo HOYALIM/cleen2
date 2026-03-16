@@ -2,6 +2,9 @@
 
 Last updated: March 13, 2026
 
+This document captures the original product direction memo.
+For the current source-of-truth product definition, see [PRD.md](PRD.md).
+
 ## Positioning
 
 `cleen2` is a **tab parking and recovery extension** for people whose Chrome usage gets heavy because they keep too many tabs alive at once.
